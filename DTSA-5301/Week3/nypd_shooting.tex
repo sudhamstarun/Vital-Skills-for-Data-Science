@@ -1,0 +1,304 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={NYPD Shooting Data Report based on Age, Gender, Race, and other factors},
+  pdfauthor={Tarun Sudhams},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{NYPD Shooting Data Report based on Age, Gender, Race, and other
+factors}
+\author{Tarun Sudhams}
+\date{2024-11-23}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}\label{introduction}
+
+The NYPD dataset has multiple factors that can be analyzed and
+visualized to get a better understanding of the data that we are looking
+at. This includes factors like victim's age, sex and race. This
+visualization aims at understanding the patterns and trends of gun
+violence in New York City.
+
+\section{Import required libraries}\label{import-required-libraries}
+
+These are the two main libraries that we would be using for
+visualization and data wrangling.
+
+library(ggplot2) library(tidyverse) library(dplyr)
+
+\section{Import the dataset}\label{import-the-dataset}
+
+dataset\_url \textless-
+``\url{https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv}''
+dataset \textless- read\_csv(dataset\_url)
+
+\section{Explore the dataset}\label{explore-the-dataset}
+
+Before we start tidying and transforming the dataset, let's take a look
+at how the dataset looks like and what each column looks like and the
+sample data points in each of the columns.
+
+glimpse(dataset)
+
+This gives up a glimpse at the kind of datatypes each column contains.
+Now with this information, we can try and look at following factors in
+the subsequent sections:
+
+\begin{itemize}
+\tightlist
+\item
+  Geographical Distribution
+\item
+  Monthly Shooting Trends
+\item
+  Victims Demographics by Sex
+\item
+  Weapon Types
+\item
+  Socioeconomic Analysis
+\item
+  Location Types
+\end{itemize}
+
+But before we move on to that, we should focus on data cleaning,
+processing to get it ready for analysis and visualizations.
+
+\section{Data Preprocessing}\label{data-preprocessing}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Handle missing values in our critical variables {[}age, sex, race,
+  outcome{]}:
+\end{enumerate}
+
+dataset \textless- dataset
+\%\textgreater\%filter(!is.na(VIC\_AGE\_GROUP), !is.na(VIC\_SEX),
+!is.na(VIC\_RACE))
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{1}
+\tightlist
+\item
+  Convert the datatypes of columns
+\end{enumerate}
+
+dataset\(VIC_AGE_GROUP <- as.factor(dataset\)VIC\_AGE\_GROUP)
+dataset\(VIC_SEX <- as.factor(dataset\)VIC\_SEX)
+dataset\(VIC_RACE <- as.factor(dataset\)VIC\_RACE)
+dataset\(OCCUR_DATE <- as.Date(dataset\)OCCUR\_DATE, ``\%m/\%d/\%Y'')
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{2}
+\tightlist
+\item
+  Create a new variable for time of day based on incident time
+\end{enumerate}
+
+dataset \textless- dataset \%\textgreater\%
+filter(!is.na(VIC\_AGE\_GROUP), !is.na(VIC\_SEX), !is.na(VIC\_RACE))
+\%\textgreater\% mutate( VIC\_AGE\_GROUP = as.factor(VIC\_AGE\_GROUP),
+VIC\_SEX = as.factor(VIC\_SEX), VIC\_RACE = as.factor(VIC\_RACE),
+OCCUR\_DATE = as.Date(OCCUR\_DATE), MONTH = format(OCCUR\_DATE, `\%m'),
+time\_of\_day = cut(as.POSIXlt(OCCUR\_TIME, format=`\%H:\%M:\%S')\$hour,
+breaks=c(-1, 6, 12, 18, 24), labels=c(`Night', `Morning', `Afternoon',
+`Evening')) )
+
+\section{Data Visualization}\label{data-visualization}
+
+\subsection{Geographic Distribution
+(Heatmap)}\label{geographic-distribution-heatmap}
+
+We already have some location data that we could use to generate a
+heatmap to see which areas are more prone to gun violence
+
+\subsubsection{Create a heatmap}\label{create-a-heatmap}
+
+ggplot(dataset, aes(x = Longitude, y = Latitude)) +
+stat\_density\_2d(aes(fill = ..level..), geom = ``polygon'', alpha =
+0.5) + scale\_fill\_gradient(low = ``lightblue'', high = ``darkblue'') +
+labs(title = ``Geographical Distribution of Shooting Incidents'', x =
+``Longitude'', y = ``Latitude'') + theme\_minimal()
+
+Now that we have a heatmap, let's find the top 5 locations based on this
+heatmap data.
+
+\subsubsection{Count the number of incidents per
+location}\label{count-the-number-of-incidents-per-location}
+
+top\_locations \textless- dataset \%\textgreater\% group\_by(BORO)
+\%\textgreater\% summarise(count = n()) \%\textgreater\%
+arrange(desc(count))
+
+\subsubsection{Display the top
+locations}\label{display-the-top-locations}
+
+print(top\_locations)
+
+This makes it clear that Brooklyn is probably the most dangerous area in
+all of New York City in terms of gun violence followed by Bronx, Queens,
+Manhattan and Staten Island.
+
+\subsection{Monthly Shooting Trends (Line
+Chart)}\label{monthly-shooting-trends-line-chart}
+
+Now, let's take a look at the monthly shooting numbers by aggregating it
+on a monthly basis:
+
+\subsubsection{Aggregate data by month}\label{aggregate-data-by-month}
+
+monthly\_shootings \textless- dataset \%\textgreater\% group\_by(MONTH)
+\%\textgreater\% summarise(count = n())
+
+\subsubsection{Create a line chart for monthly
+shootings}\label{create-a-line-chart-for-monthly-shootings}
+
+ggplot(monthly\_shootings, aes(x = MONTH, y = count)) +
+geom\_line(color=``blue'') + geom\_point(color=``blue'') +
+labs(title=``Monthly Shooting Incidents Over Time'', x=``Month'',
+y=``Number of Shootings'') + theme\_minimal() +
+theme(axis.text.x=element\_text(angle=45))
+
+So the chart actually shows that there is steady rise in shootings in
+the middle of the year and it shootings reduce in number towards the
+later part of the year. That's an interesting observation although this
+might not actually mean anything.
+
+\subsection{Victim/Perpetrator Demographics by Sex (Bar
+Chart)}\label{victimperpetrator-demographics-by-sex-bar-chart}
+
+Let's begin with preparing the data for victim's sex and perperator's
+sex to analyse which sex causes more violence and is subjected to gun
+violence in the city.
+
+\subsubsection{Prep data based on victom and perpetrator's
+sex}\label{prep-data-based-on-victom-and-perpetrators-sex}
+
+victim\_sex \textless- dataset \%\textgreater\% group\_by(VIC\_SEX)
+\%\textgreater\% summarise(count=n())
+
+perpetrator\_sex \textless- dataset \%\textgreater\%
+group\_by(PERP\_SEX) \%\textgreater\% summarise(count=n())
+
+\subsubsection{Create a bar chart}\label{create-a-bar-chart}
+
+ggplot(victim\_sex, aes(x=VIC\_SEX, y=count, fill=VIC\_SEX)) +
+geom\_bar(stat=``identity'') + labs(title=``Victim Demographics by
+Sex'', x=``Sex'', y=``Number of Victims'') + theme\_minimal()
+
+ggplot(perpetrator\_sex, aes(x=PERP\_SEX, y=count, fill=PERP\_SEX)) +
+geom\_bar(stat=``identity'') + labs(title=``Perpetrator Demographics by
+Sex'', x=``Sex'', y=``Number of Perpetrators'') + theme\_minimal()
+
+It's quite clear that victims are mostly males howvever we can't draw
+the same conclusion about Prepetrator's sex since there are a lot of
+null and NA values also in the data we makes it difficult to come to a
+conclusion.
+
+\subsection{Victim/Perpetrator's Demography by
+Race}\label{victimperpetrators-demography-by-race}
+
+We also have some information on the kind of weapons used which can be
+useful to deduce and understand what kinds of weapons caused the most
+harm.
+
+\subsubsection{Group dataset by victim's and perpetrator's
+race}\label{group-dataset-by-victims-and-perpetrators-race}
+
+victim\_race \textless- dataset \%\textgreater\% group\_by(VIC\_RACE)
+\%\textgreater\% summarise(count=n())
+
+perpetrators\_race \textless- dataset \%\textgreater\%
+group\_by(PERP\_RACE) \%\textgreater\% summarise(count=n())
+
+\subsubsection{Create a bar chart for victim's
+race}\label{create-a-bar-chart-for-victims-race}
+
+ggplot(victim\_race, aes(x=VIC\_RACE, y=count, fill=VIC\_RACE)) +
+geom\_bar(stat=``identity'') + labs(title=``Victim Demographics by
+Race'', x=``Sex'', y=``Number of Victims'') + theme\_minimal()
+
+\subsubsection{Create a bar chart for perpetrator's
+race}\label{create-a-bar-chart-for-perpetrators-race}
+
+ggplot(perpetrators\_race, aes(x=PERP\_RACE, y=count, fill=PERP\_RACE))
++ geom\_bar(stat=``identity'') + labs(title=``Perpetrator's Demographics
+by Race'', x=``Race'', y=``Number of Victims'') + theme\_minimal()
+
+Similar conclusions can be drawn here about the race of the
+victim/perpetrator. We can see that there is a lot of cases where the
+data about the race is missing for perpetrator's which makes it
+difficult to say which race is the most violent. More importantly,
+socioeconomic factors also play an important role in determining whether
+the race of the victim/perpetrator should actually matter. In our case,
+it makes more sense to attribute it to socioeconomic factors rather than
+simply making a conclusion based on the race of the perpetrator or the
+victim.
+
+\end{document}

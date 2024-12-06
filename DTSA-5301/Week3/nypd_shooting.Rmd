@@ -1,0 +1,276 @@
+---
+title: "NYPD Shooting Data Report based on Age, Gender, Race, and other factors"
+author: "Tarun Sudhams"
+date: "2024-11-23"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction and source of dataset
+
+I used the NYPD data set “NYPD Gun Violence Historical” available on New York City's website.
+
+The NYPD dataset has multiple factors that can be analyzed and visualized to get a better understanding of the data that we are looking at. This includes factors like victim's age, sex and race. This visualization aims at understanding the patterns and trends of gun violence in New York City.
+
+# Import required libraries
+
+These are the two main libraries that we would be using for visualization and data wrangling.
+
+```{r remedy001}
+
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+
+```
+
+# Import the dataset
+
+```{r remedy002}
+
+dataset_url <- "https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv"
+dataset <- read_csv(dataset_url)
+
+```
+
+# Explore the dataset
+
+Before we start tidying and transforming the dataset, let's take a look at how the dataset looks like and what each column looks like and the sample data points in each of the columns.
+
+```{r remedy003}
+
+glimpse(dataset)
+
+```
+
+
+This gives up a glimpse at the kind of datatypes each column contains. Now with this information, we can try and look at following factors in the subsequent sections. This is in an attempt to model our problem to see possible indicators to help us answer the trends that we could see in the dataset.
+
+- Geographical Distribution
+- Monthly Shooting Trends
+- Victims/Perpetrators Demographics by Sex
+- Victims/Perpetrators Demographics by Race
+
+But before we move on to that, we should focus on data cleaning, processing to get it ready for analysis and visualizations.
+
+# Data Preprocessing
+
+1. Handle missing values in our critical variables [age, sex, race, outcome]:
+
+```{r echo=TRUE}
+dataset <- dataset %>%filter(!is.na(VIC_AGE_GROUP), !is.na(VIC_SEX), !is.na(VIC_RACE))
+
+```
+
+2. Convert the datatypes of columns
+
+```{r remedy004}
+
+dataset$VIC_AGE_GROUP <- as.factor(dataset$VIC_AGE_GROUP)
+dataset$VIC_SEX <- as.factor(dataset$VIC_SEX)
+dataset$VIC_RACE <- as.factor(dataset$VIC_RACE)
+dataset$OCCUR_DATE <- as.Date(dataset$OCCUR_DATE, "%m/%d/%Y") 
+
+```
+
+3. Create a new variable for time of day based on incident time
+
+```{r remedy005}
+
+dataset <- dataset %>%
+  filter(!is.na(VIC_AGE_GROUP), !is.na(VIC_SEX), !is.na(VIC_RACE)) %>%
+  mutate(
+    VIC_AGE_GROUP = as.factor(VIC_AGE_GROUP),
+    VIC_SEX = as.factor(VIC_SEX),
+    VIC_RACE = as.factor(VIC_RACE),
+    OCCUR_DATE = as.Date(OCCUR_DATE),
+    MONTH = format(OCCUR_DATE, '%m'),
+    time_of_day = cut(as.POSIXlt(OCCUR_TIME, format='%H:%M:%S')$hour,
+                      breaks=c(-1, 6, 12, 18, 24),
+                      labels=c('Night', 'Morning', 'Afternoon', 'Evening'))
+  )
+
+
+```
+# Data Visualization
+
+## Geographic Distribution (Heatmap)
+
+We already have some location data that we could use to generate a heatmap to see which areas are more prone to gun violence
+
+
+### Create a heatmap
+```{r remedy006}
+ggplot(dataset, aes(x = Longitude, y = Latitude)) +
+  stat_density_2d(aes(fill = ..level..), geom = "polygon", alpha = 0.5) +
+  scale_fill_gradient(low = "lightblue", high = "darkblue") +
+  labs(title = "Geographical Distribution of Shooting Incidents",
+       x = "Longitude", y = "Latitude") +
+  theme_minimal()
+
+```
+
+Now that we have a heatmap, let's find the top 5 locations based on this heatmap data.
+
+
+### Count the number of incidents per location
+```{r remedy007}
+top_locations <- dataset %>%
+  group_by(BORO) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+
+```
+
+
+### Display the top locations 
+```{r remedy008}
+print(top_locations)
+
+```
+
+This makes it clear that Brooklyn is probably the most dangerous area in all of New York City in terms of gun violence followed by Bronx, Queens, Manhattan and Staten Island.
+
+## Monthly Shooting Trends (Line Chart)
+
+Now, let's take a look at the monthly shooting numbers by aggregating it on a monthly basis:
+
+
+```{r remedy009}
+### Aggregate data by month
+monthly_shootings <- dataset %>%
+  group_by(MONTH) %>%
+  summarise(count = n())
+
+```
+
+
+### Create a line chart for monthly shootings
+```{r remedy0010}
+ggplot(monthly_shootings, aes(x = MONTH, y = count)) +
+  geom_line(color="blue") +
+  geom_point(color="blue") +
+  labs(title="Monthly Shooting Incidents Over Time",
+       x="Month", y="Number of Shootings") +
+  theme_minimal() +
+  theme(axis.text.x=element_text(angle=45))
+
+```
+
+So the chart actually shows that there is steady rise in shootings in the middle of the year and it shootings reduce in number towards the later part of the year. That's an interesting observation although this might not actually mean anything.
+
+## Victim/Perpetrator Demographics by Sex (Bar Chart)
+
+Let's begin with preparing the data for victim's sex and perperator's sex to analyse which sex causes more violence and is subjected to gun violence in the city.
+
+### Prep data based on victom and perpetrator's sex
+
+```{r remedy011}
+
+victim_sex <- dataset %>%
+  group_by(VIC_SEX) %>%
+  summarise(count=n())
+  
+perpetrator_sex <- dataset %>%
+  group_by(PERP_SEX) %>%
+  summarise(count=n())
+  
+
+```
+
+### Create a bar chart
+```{r remedy012}
+ggplot(victim_sex, aes(x=VIC_SEX, y=count, fill=VIC_SEX)) +
+  geom_bar(stat="identity") +
+  labs(title="Victim Demographics by Sex",
+       x="Sex", y="Number of Victims") +
+  theme_minimal()
+
+ggplot(perpetrator_sex, aes(x=PERP_SEX, y=count, fill=PERP_SEX)) +
+  geom_bar(stat="identity") +
+  labs(title="Perpetrator Demographics by Sex",
+       x="Sex", y="Number of Perpetrators") +
+  theme_minimal()
+
+
+```
+
+It's quite clear that victims are mostly males howvever we can't draw the same conclusion about Prepetrator's sex since there are a lot of null and NA values also in the data we makes it difficult to come to a conclusion.
+
+## Victim/Perpetrator's Demography by Race
+
+We also have some information on the kind of weapons used which can be useful to deduce and understand what kinds of weapons caused the most harm.
+
+### Group dataset by victim's and perpetrator's race
+```{r remedy013}
+victim_race <- dataset %>%
+  group_by(VIC_RACE) %>%
+  summarise(count=n())
+  
+perpetrators_race <- dataset %>%
+  group_by(PERP_RACE) %>%
+  summarise(count=n())
+
+
+```
+
+```{r remedy014}
+### Create a bar chart for victim's race
+ggplot(victim_race, aes(x=VIC_RACE, y=count, fill=VIC_RACE)) +
+  geom_bar(stat="identity") +
+  labs(title="Victim Demographics by Race",
+       x="Sex", y="Number of Victims") +
+  theme_minimal()
+
+```
+  
+
+```{r remedy015}
+### Create a bar chart for perpetrator's race
+ggplot(perpetrators_race, aes(x=PERP_RACE, y=count, fill=PERP_RACE)) +
+  geom_bar(stat="identity") +
+  labs(title="Perpetrator's Demographics by Race",
+       x="Race", y="Number of Victims") +
+  theme_minimal()
+
+```
+
+Similar conclusions can be drawn here about the race of the victim/perpetrator. We can see that there is a lot of cases where the data about the race is missing for perpetrator's which makes it difficult to say which race is the most violent. More importantly, socioeconomic factors also play an important role in determining whether the race of the victim/perpetrator should actually matter. In our case, it makes more sense to attribute it to socioeconomic factors rather than simply making a conclusion based on the race of the perpetrator or the victim.
+
+## An attempt to predict shootings in the year 2024
+
+Let's try to also predict if we can find a way to tell how many shootings would be happening based on the existing pattern that we have established.
+
+First we start with aligning some of variables that we want to get prediction
+
+```{r remedy016}
+
+model_shooting <- dataset$OCCUR_DATE
+shooting_by_year <- format(model_shooting, "%Y")
+count_by_year <- table(shooting_by_year)
+dataset_group_by_year <- as.data.frame(count_by_year)
+names(dataset_group_by_year) <- c("Year", "Count")
+```
+
+Now, we model and predict the number of shootings for the next year.
+```{r remedy017}
+dataset_group_by_year$Year <- as.numeric(as.character(dataset_group_by_year$Year))
+model <- lm(Count ~ Year, data = dataset_group_by_year)
+prediction <- predict(model, newdata = data.frame(Year = 2024))
+
+cat("The count for shootings that could happen based on the current trend for the year 2024", "is:", prediction)
+
+```
+
+## Bias and Conclusion
+
+In terms of bias, the data quite easily would push us to conclude that race plays a role in deciding which groups have the highest shooting incidents. However, this also requires us to consider other datasets as well to better understand the socioeconomic situation the regions where there is a lot of gun violence. 
+
+We can only make a proper conclusion once we have that data and hence it makes it important to mitigate our bias by just looking at the data and drawing a conclusion when we should clearly be asking more questions.
+  
+  
