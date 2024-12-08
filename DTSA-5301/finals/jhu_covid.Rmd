@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 ## Introduction and source of dataset
 
-This analysis explores global and U.S.-specific COVID-19 trends using data from the Johns Hopkins University GitHub repository. I want to specifically use two variables: cases and deaths, to analyze data on a global as well as county level. Finally we can round off the study with some modelling to understand the realtionship between cases and deaths in context of our data.
+This analysis explores global and U.S.-specific COVID-19 trends using data from the Johns Hopkins University GitHub repository. I want to specifically use two variables: cases and deaths, to analyze data on a global as well as county level. Finally we can round off the study with some modelling to understand the relationship between cases and deaths in context of our data.
 
 ### Goals:
 1. Identify countries most affected by COVID-19 in terms of confirmed cases and deaths.
@@ -198,7 +198,7 @@ ggplot(top_confirmed_county, aes(x = reorder(County, TotalConfirmedCases), y = T
 
 ```
 
-#### Obersations
+#### Observations
 
 Seems, like the top 3 counties are consistent in both deaths and confirmed cases. This should allow us to conclude that a better understanding for this would be using Case Fatality Rate (CFR).CFR helps us understand how deadly the virus has been in different regions relative to the total cases. 
 

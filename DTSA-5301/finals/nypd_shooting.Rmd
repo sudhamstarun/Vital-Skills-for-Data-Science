@@ -53,26 +53,25 @@ glimpse(dataset)
 
 ```
 
-
 This gives up a glimpse at the kind of datatypes each column contains. Now with this information, we can try and look at following factors in the subsequent sections. This is in an attempt to model our problem to see possible indicators to help us answer the trends that we could see in the dataset.
 
-- Geographical Distribution
-- Monthly Shooting Trends
-- Victims/Perpetrators Demographics by Sex
-- Victims/Perpetrators Demographics by Race
+-   Geographical Distribution
+-   Monthly Shooting Trends
+-   Victims/Perpetrators Demographics by Sex
+-   Victims/Perpetrators Demographics by Race
 
 But before we move on to that, we should focus on data cleaning, processing to get it ready for analysis and visualizations.
 
 # Data Preprocessing
 
-1. Handle missing values in our critical variables [age, sex, race, outcome]:
+1.  Handle missing values in our critical variables [age, sex, race, outcome]:
 
 ```{r echo=TRUE}
 dataset <- dataset %>%filter(!is.na(VIC_AGE_GROUP), !is.na(VIC_SEX), !is.na(VIC_RACE))
 
 ```
 
-2. Convert the datatypes of columns
+2.  Convert the datatypes of columns
 
 ```{r remedy004}
 
@@ -83,7 +82,7 @@ dataset$OCCUR_DATE <- as.Date(dataset$OCCUR_DATE, "%m/%d/%Y")
 
 ```
 
-3. Create a new variable for time of day based on incident time
+3.  Create a new variable for time of day based on incident time
 
 ```{r remedy005}
 
@@ -102,14 +101,15 @@ dataset <- dataset %>%
 
 
 ```
+
 # Data Visualization
 
 ## Geographic Distribution (Heatmap)
 
 We already have some location data that we could use to generate a heatmap to see which areas are more prone to gun violence
 
-
 ### Create a heatmap
+
 ```{r remedy006}
 ggplot(dataset, aes(x = Longitude, y = Latitude)) +
   stat_density_2d(aes(fill = ..level..), geom = "polygon", alpha = 0.5) +
@@ -122,8 +122,8 @@ ggplot(dataset, aes(x = Longitude, y = Latitude)) +
 
 Now that we have a heatmap, let's find the top 5 locations based on this heatmap data.
 
-
 ### Count the number of incidents per location
+
 ```{r remedy007}
 top_locations <- dataset %>%
   group_by(BORO) %>%
@@ -132,8 +132,8 @@ top_locations <- dataset %>%
 
 ```
 
+### Display the top locations
 
-### Display the top locations 
 ```{r remedy008}
 print(top_locations)
 
@@ -145,7 +145,6 @@ This makes it clear that Brooklyn is probably the most dangerous area in all of 
 
 Now, let's take a look at the monthly shooting numbers by aggregating it on a monthly basis:
 
-
 ```{r remedy009}
 ### Aggregate data by month
 monthly_shootings <- dataset %>%
@@ -154,8 +153,8 @@ monthly_shootings <- dataset %>%
 
 ```
 
-
 ### Create a line chart for monthly shootings
+
 ```{r remedy0010}
 ggplot(monthly_shootings, aes(x = MONTH, y = count)) +
   geom_line(color="blue") +
@@ -189,6 +188,7 @@ perpetrator_sex <- dataset %>%
 ```
 
 ### Create a bar chart
+
 ```{r remedy012}
 ggplot(victim_sex, aes(x=VIC_SEX, y=count, fill=VIC_SEX)) +
   geom_bar(stat="identity") +
@@ -212,6 +212,7 @@ It's quite clear that victims are mostly males howvever we can't draw the same c
 We also have some information on the kind of weapons used which can be useful to deduce and understand what kinds of weapons caused the most harm.
 
 ### Group dataset by victim's and perpetrator's race
+
 ```{r remedy013}
 victim_race <- dataset %>%
   group_by(VIC_RACE) %>%
@@ -234,7 +235,6 @@ ggplot(victim_race, aes(x=VIC_RACE, y=count, fill=VIC_RACE)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1),  # Vertical x-axis labels
         axis.text.y = element_text(angle = 90, vjust = 0.5)) # Vertical y-axis labels
 ```
-  
 
 ```{r remedy015}
 ### Create a bar chart for perpetrator's race
@@ -320,8 +320,6 @@ print(annual_shootings_with_prediction)
 
 ## Bias and Conclusion
 
-In terms of bias, the data quite easily would push us to conclude that race plays a role in deciding which groups have the highest shooting incidents. However, this also requires us to consider other datasets as well to better understand the socioeconomic situation the regions where there is a lot of gun violence. 
+In terms of bias, the data quite easily would push us to conclude that race plays a role in deciding which groups have the highest shooting incidents. However, this also requires us to consider other datasets as well to better understand the socioeconomic situation the regions where there is a lot of gun violence.
 
 We can only make a proper conclusion once we have that data and hence it makes it important to mitigate our bias by just looking at the data and drawing a conclusion when we should clearly be asking more questions.
-  
-  
