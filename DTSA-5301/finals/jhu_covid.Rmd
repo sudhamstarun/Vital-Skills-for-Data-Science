@@ -1,32 +1,258 @@
 ---
-title: "jhu_covid"
-output: pdf_document
+title: "COVID-19 Final Project"
 date: "2024-12-06"
-output: 
-  pdf_document: 
-    keep_tex: yes
+author: "Tarun Sudhams"
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+## Introduction and source of dataset
 
-## R Markdown
+This analysis explores global and U.S.-specific COVID-19 trends using data from the Johns Hopkins University GitHub repository. I want to specifically use two variables: cases and deaths, to analyze data on a global as well as county level. Finally we can round off the study with some modelling to understand the realtionship between cases and deaths in context of our data.
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+### Goals:
+1. Identify countries most affected by COVID-19 in terms of confirmed cases and deaths.
+2. Analyze U.S. counties with the highest and lowest confirmed cases and deaths.
+3. Build a linear regression model to examine the relationship between confirmed cases and deaths.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+## Import required libraries
 
-```{r cars}
-summary(cars)
+These are the main libraries that we would be using for visualization and data wrangling.
+
+```{r remedy001}
+options(repos='http://cran.rstudio.com/')
+install.packages("ggplot2") 
+install.packages("tidyverse") 
+install.packages("dplyr")
+install.packages("lubridate")
+
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(readr)
+library(lubridate)
 ```
 
-## Including Plots
+## Download the dataset
 
-You can also embed plots, for example:
+The source of the dataset is on John Hopkins' Github repository: https://github.com/CSSEGISandData/COVID-19/tree/master/csse_covid_19_data/csse_covid_19_time_series
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+This is the base URL: https://raw.githubusercontent.com/CSSEGISandData/COVID-19/refs/heads/master/csse_covid_19_data/csse_covid_19_time_series/
+
+We will append the each file name to this to get the data.
+
+```{r remedy002}
+base_url <- ("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/refs/heads/master/csse_covid_19_data/csse_covid_19_time_series/")
+file_names <- c("time_series_covid19_confirmed_global.csv",
+"time_series_covid19_deaths_global.csv",
+"time_series_covid19_confirmed_US.csv",
+"time_series_covid19_deaths_US.csv"
+)
+dataset_urls <- str_c(base_url, file_names)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Now, let's load the dataset into variables for our analysis:
+
+```{r remedy003}
+
+global_cases <- read_csv(dataset_urls[1])
+glboal_deaths <- read_csv(dataset_urls[2])
+US_cases <- read_csv(dataset_urls[3])
+US_deaths <- read_csv(dataset_urls[4])
+```
+
+## Tidy and clean the dataset
+
+Next, we will tidy the data by reshaping it to have dates in a consistent format (yyyy-mm-dd). This will facilitate easier analysis and visualization.
+
+```{r remedy004}
+
+tidy_confirmed_global <- global_cases %>%
+  pivot_longer(cols = starts_with("1/"), names_to = "Date", values_to = "Confirmed") %>%
+  mutate(Date = as.Date(Date, format = "%m/%d/%y")) %>%
+  mutate(Date = format(Date, "%Y-%m-%d")) %>%
+  group_by(`Country/Region`) %>%
+  summarise(TotalConfirmed = sum(Confirmed))
+tidy_deaths_global <- glboal_deaths %>%
+  pivot_longer(cols = starts_with("1/"), names_to = "Date", values_to = "Confirmed") %>%
+  mutate(Date = as.Date(Date, format = "%m/%d/%y")) %>%
+  mutate(Date = format(Date, "%Y-%m-%d")) %>%
+  group_by(`Country/Region`) %>%
+  summarise(TotalConfirmed = sum(Confirmed))
+tidy_confirmed_US <- US_cases %>%
+  pivot_longer(cols = starts_with("1/"), names_to = "Date", values_to = "Confirmed") %>%
+  mutate(Date = as.Date(Date, format = "%m/%d/%y")) %>%
+  mutate(Date = format(Date, "%Y-%m-%d")) %>%
+  group_by(`Combined_Key`) %>%
+  summarise(TotalConfirmed = sum(Confirmed))
+tidy_deaths_US <- US_deaths %>%
+  pivot_longer(cols = starts_with("1/"), names_to = "Date", values_to = "Confirmed") %>%
+  mutate(Date = as.Date(Date, format = "%m/%d/%y")) %>%
+  mutate(Date = format(Date, "%Y-%m-%d")) %>%
+  group_by(`Combined_Key`) %>%
+  summarise(TotalConfirmed = sum(Confirmed))
+
+```
+
+Now we, can merge confirmed and death dataframes into one to visualize the data in our next steps for both global and US cases.
+
+```{r remedy005}
+global_covid_data <- tidy_confirmed_global %>% inner_join(tidy_deaths_global, by="Country/Region") %>% rename(TotalConfirmedCases = TotalConfirmed.x, TotalDeaths=TotalConfirmed.y, Country=`Country/Region`)
+us_covid_data <- tidy_confirmed_US %>% inner_join(tidy_deaths_US, by="Combined_Key") %>% rename(TotalConfirmedCases = TotalConfirmed.x, TotalDeaths=TotalConfirmed.y, County=Combined_Key)
+
+```
+
+## Analysis and Visualization
+
+The clean global and county level data should enable us to do some visualizations. Let's started global data to study country level cases and deaths info:
+
+### Visualizing cases and deaths on global level per county
+
+#### Top 10 countries by confirmed cases
+
+This section identifies the top 10 countries with the highest confirmed COVID-19 cases globally. Understanding which countries are most affected can help guide public health responses.
+
+```{r remedy006}
+
+top_confirmed <- global_covid_data %>%
+  arrange(desc(TotalConfirmedCases)) %>%
+  slice(1:10)
+
+# Bar plot for confirmed cases
+ggplot(top_confirmed, aes(x = reorder(`Country`, TotalConfirmedCases), y = TotalConfirmedCases)) +
+  geom_bar(stat = "identity", fill = "blue") +
+  coord_flip() +
+  labs(title = "Top 10 Countries with Highest Confirmed COVID-19 Cases",
+       x = "Country", y = "Number of Cases") +
+  theme_minimal()
+```
+
+#### Top 10 countries with highest deaths
+
+Similar to confirmed cases, this section highlights countries with the highest death tolls due to COVID-19. This information is crucial for understanding mortality trends.
+
+```{r remedy007}
+
+# Top 10 countries with highest deaths
+top_deaths <- global_covid_data %>%
+  arrange(desc(TotalDeaths)) %>%
+  slice(1:10)
+
+# Bar plot for deaths
+ggplot(top_deaths, aes(x = reorder(`Country`, TotalDeaths), y = TotalDeaths)) +
+  geom_bar(stat = "identity", fill = "red") +
+  coord_flip() +
+  labs(title = "Top 10 Countries with Highest COVID-19 Deaths",
+       x = "Country", y = "Number of Deaths") +
+  theme_minimal()
+
+```
+
+#### Observations
+
+We notice that countries with highest cases and deaths are consistent and recurrent. There are multiple factors that this could be the reason, including population sizes and the quality of reporting as well. But assuming these numbers are a 100% correct, we see some of the largest populations in the world consistently at the top of the charts which is in line with the observations. 
+
+We could use population data to get a more consistent analysis where the deaths per million or cases per million would make much more sense to analyse the cases and deaths. However, this would be beyond the scope this assignment at the moment. 
+
+### Visualizing US county level cases and deaths
+
+In this section, we analyze U.S. counties with the highest and lowest mortality rates due to COVID-19. This analysis provides insights into regional disparities in health outcomes.
+
+#### Counties with Highest and Lowest Deaths in the U.S.
+
+```{r remedy008}
+top_deaths_county <- us_covid_data %>%
+  arrange(desc(TotalDeaths)) %>%
+  slice(1:10)
+
+ggplot(top_deaths_county, aes(x = reorder(County, TotalDeaths), y = TotalDeaths)) +
+  geom_bar(stat = "identity", fill = "red") +
+  coord_flip() +
+  labs(title = "Counties with Highest and Lowest Deaths in the U.S.",
+       x = "County", y = "Number of Deaths") +
+  theme_minimal()
+
+
+```
+
+Now in the same fashion, we can also analyze the counties with highest and lowest confirmed cases:
+
+#### Counties with Highest and Lowest Confirmed Cases in the U.S.
+
+```{r remedy009}
+
+top_confirmed_county <- us_covid_data %>%
+  arrange(desc(TotalConfirmedCases)) %>%
+  slice(1:10)
+
+ggplot(top_confirmed_county, aes(x = reorder(County, TotalConfirmedCases), y = TotalConfirmedCases)) +
+  geom_bar(stat = "identity", fill = "blue") +
+  coord_flip() +
+  labs(title = "Counties with Highest and Lowest Confirmed Cases in the U.S.",
+       x = "County", y = "Number of Confirmed Cases") +
+  theme_minimal()
+
+```
+
+#### Obersations
+
+Seems, like the top 3 counties are consistent in both deaths and confirmed cases. This should allow us to conclude that a better understanding for this would be using Case Fatality Rate (CFR).CFR helps us understand how deadly the virus has been in different regions relative to the total cases. 
+
+However, we have a large number of out of county cases as well as unassigned cases in the dataset which makes it difficult to calculate CFR with reasonable accuracy and could hinder our insights.
+
+## Linear Regression Modelling
+
+This section explores the relationship between confirmed COVID-19 cases and deaths using a linear regression model. Understanding this relationship can provide insights into how effectively healthcare systems manage severe cases.
+
+```{r remedy010}
+model <- lm(TotalDeaths ~ TotalConfirmedCases, data = us_covid_data)
+
+# Summary of the model
+summary(model)
+```
+After taking a look at the summary, here's some observations that we can make:
+
+### Key Findings
+
+##### **Model Fit (R-squared):**
+- The R-squared value is **0.9129**, indicating that approximately **91.29% of the variance** in COVID-19 deaths is explained by the total confirmed cases.
+- This suggests a **strong linear relationship** between these variables.
+
+##### **Significance of Coefficients:**
+- The slope ($$\beta_1$$) for TotalConfirmedCases is estimated to be **0.01145**, with a very small p-value ($$< 2 \times 10^{-16}$$). This indicates that the relationship between confirmed cases and deaths is **statistically significant**.
+
+- The intercept ($$ \beta_0 $$) is also significant ($$ p = 0.000123 $$), meaning it contributes meaningfully to the model.
+
+##### **Residual Analysis:**
+- Residuals range from **−281,288** to **438,654**, with a median close to zero (**−743**).
+- The residual plot shows some **non-random patterns**, particularly at the extremes, where residuals deviate significantly from zero. This could indicate potential issues such as **heteroscedasticity** or **outliers**.
+
+##### **F-statistic and p-value:**
+- The F-statistic ($$ 3.501 \times 10^4 $$) and its corresponding p-value ($$< 2.2 \times 10^{-16}$$) confirm that the overall model is **statistically significant**.
+
+##### **Residual Standard Error:**
+- The residual standard error (RSE) is **22,000**, suggesting that while the model explains most of the variance, there is still some unexplained variability in deaths.
+
+
+##### Interpretation
+- There is a **strong and statistically significant linear relationship** between total confirmed COVID-19 cases and deaths in the county.
+- However, the residual plot suggests potential issues with model assumptions (e.g., homoscedasticity or normality of residuals), which might need further investigation or transformation of variables.
+
+
+#### Recommendations
+- Investigate outliers and high residual values to determine if they are influencing the model disproportionately.
+- Consider alternative models (e.g., polynomial regression or log transformations) if non-linearity or heteroscedasticity persists.
+
+
+## Discussion of Biases
+
+### **Data Collection Bias**
+- Variability in testing rates across regions may lead to **underreporting or overreporting** of cases.
+- Rural areas may have **lower case counts** but **higher fatality rates** due to limited healthcare access.
+
+### **Model Bias**
+- The linear regression model assumes a **uniform relationship** between cases and deaths across all regions, which may not hold due to **demographic or healthcare differences**.

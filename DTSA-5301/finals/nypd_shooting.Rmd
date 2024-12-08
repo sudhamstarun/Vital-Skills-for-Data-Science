@@ -19,7 +19,7 @@ The NYPD dataset has multiple factors that can be analyzed and visualized to get
 
 # Import required libraries
 
-These are the two main libraries that we would be using for visualization and data wrangling.
+These are the main libraries that we would be using for visualization and data wrangling.
 
 ```{r remedy001}
 options(repos='http://cran.rstudio.com/')
